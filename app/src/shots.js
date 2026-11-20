@@ -1,87 +1,94 @@
-// Fixed scenes for screenshots: ?shot=cover shows the exported cover alone, full
-// frame, drawn by the app itself at the viewport's size; ?shot=editor shows the
-// editor with a sample photo loaded. Query params pick the sample photo, caption,
-// subtitle, layout, grade and post size. window.__shotReady is set once the fonts
-// and photos have loaded and the cover has painted.
-import { drawCover } from './cover.js';
+// Screenshot scenes for the entry's screenshots: ?shot=cover draws one exported
+// cover full-frame, ?shot=portrait draws a story-size cover, ?shot=tilted draws
+// a second landscape cover, and ?shot=editor shows the editor with a photo
+// loaded. The app itself draws every scene — nothing is composited outside it.
 
-/** Slices one photo across a grid: each panel shows a different part of it. */
-function slicePanels(state, cols, rows, amount, zoom) {
-  state.panels.forEach((p, i) => {
-    p.photo = 0;
-    p.zoom = zoom;
-    p.ox = ((cols - 1) / 2 - (i % cols)) * amount;
-    p.oy = ((rows - 1) / 2 - Math.floor(i / cols)) * amount;
-  });
-}
+import { sizeById } from "./cover.js";
 
-export async function runShot(shot, query, app) {
-  const photo = query.get('photo') ?? 'boulevard';
-  const caption = query.get('caption') ?? 'NEON COAST';
-  const subtitle = query.get('subtitle') ?? 'Vice nights, golden days';
-  const layout = query.get('layout') ?? 'nine';
-  const grade = query.get('grade') ?? 'sunset';
-  const size = query.get('size') ?? 'square';
+const SCENES = {
+  cover: {
+    bodyClass: "shot-cover",
+    size: "wide",
+    layout: "hero",
+    grade: "sunset",
+    caption: "NEON COAST",
+    subtitle: "Vice City nights, palm trees & pink skies",
+    badge: "★★★★★ LEONIDA",
+  },
+  portrait: {
+    bodyClass: "shot-portrait",
+    size: "portrait",
+    layout: "nine",
+    grade: "neon",
+    caption: "NEON COAST",
+    subtitle: "nine panels, one sunset",
+    badge: "★ 9 PANELS",
+  },
+  tilted: {
+    bodyClass: "shot-cover",
+    size: "wide",
+    layout: "tilted",
+    grade: "gold",
+    caption: "GOLDEN HOUR",
+    subtitle: "boulevard cruise at dusk",
+    badge: "★★★★★ PIER 9",
+  },
+  editor: {
+    bodyClass: "",
+    size: "square",
+    layout: "tilted",
+    grade: "sunset",
+    caption: "NEON COAST",
+    subtitle: "Vice City nights, palm trees & pink skies",
+    badge: "★★★★★ LEONIDA",
+  },
+};
 
-  try {
-    await document.fonts.load('400 100px Anton');
-    await document.fonts.load('400 100px Pacifico');
-    await document.fonts.ready;
-  } catch {
-    // System fallbacks still letter the cover; a missing font never blocks a shot.
-  }
+export function initShotMode(deps) {
+  const params = new URLSearchParams(window.location.search);
+  const shot = params.get("shot");
+  if (!shot || !SCENES[shot]) return false;
+  const scene = SCENES[shot];
+  const { state, render, canvas } = deps;
 
-  app.setCaption(caption);
-  app.setSubtitle(subtitle);
-  app.setLayout(layout);
-  app.setGrade(grade);
-  app.setSize(size);
+  state.layout = scene.layout;
+  state.grade = scene.grade;
+  state.size = scene.size;
+  state.caption = scene.caption;
+  state.subtitle = scene.subtitle;
+  state.badge = scene.badge;
+  // spread the two sample photos across the panels
+  state.panelPhoto = [0, 1, 0, 1, 0, 1, 0, 1, 0];
+  state.crops = state.crops.map((c, i) => ({ zoom: 1.2, x: i % 2 ? 0.08 : -0.06, y: 0 }));
 
-  if (shot === 'cover') {
-    document.body.classList.add('shot-cover');
-    await app.loadSample(`${photo}.jpg`, `${photo} sample`);
-    const state = window.__appState;
-    // One photo sliced across the panels: each panel shows a different crop of
-    // the same photo, so the grid reads as a single poster, not a repeated tile.
-    // A positive offset moves the photo so the window shows its top/left part.
-    if (layout === 'tilted') {
-      const crops = [
-        { ox: 0.9, oy: 0.9 },
-        { ox: -0.9, oy: -0.5 },
-        { ox: 0, oy: -0.9 },
-      ];
-      state.panels.forEach((p, i) => {
-        p.photo = 0;
-        p.zoom = 1.1;
-        p.ox = crops[i % 3].ox;
-        p.oy = crops[i % 3].oy;
+  const s = sizeById(scene.size);
+  canvas.width = s.w;
+  canvas.height = s.h;
+  if (scene.bodyClass) document.body.classList.add(scene.bodyClass);
+
+  const finish = () => {
+    render();
+    // draw once more after webfonts arrive so the title uses Anton/Pacifico
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => {
+        render();
+        window.__shotReady = true;
       });
-    } else if (layout === 'nine' || layout === 'four') {
-      const cols = layout === 'four' ? 2 : 3;
-      const rows = layout === 'four' ? 2 : 3;
-      slicePanels(state, cols, rows, 0.9, 1.15);
     } else {
-      // The hero and full-bleed layouts want the whole photo, not a slice.
-      state.panels.forEach((p) => { p.zoom = 1; p.ox = 0; p.oy = 0; });
+      window.__shotReady = true;
     }
-    const canvas = document.getElementById('cover');
-    drawCover(canvas, state, window.innerWidth, window.innerHeight);
-  } else {
-    // Editor scene: the full app, both samples loaded and alternating across
-    // the panels, ready to be used.
-    await app.loadSample(`${photo}.jpg`, `${photo} sample`);
-    await app.loadSampleSlot(1, 'pier.jpg', 'Pier sample');
-    const state = window.__appState;
-    state.panels.forEach((p, i) => {
-      p.photo = i % 2;
-      p.zoom = 1.15;
-      p.ox = (1 - (i % 3)) * 0.45;
-      p.oy = (1 - Math.floor(i / 3)) * 0.45;
-    });
-    app.syncControls();
-    app.render();
-  }
+  };
 
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  window.__shotReady = true;
+  // Captions / selects in the editor chrome reflect the scene too.
+  const captionInput = document.getElementById("captionInput");
+  if (captionInput) captionInput.value = state.caption;
+  const subtitleInput = document.getElementById("subtitleInput");
+  if (subtitleInput) subtitleInput.value = state.subtitle;
+  const badgeInput = document.getElementById("badgeInput");
+  if (badgeInput) badgeInput.value = state.badge;
+  const note = document.getElementById("previewNote");
+  if (note) note.textContent = `${s.w} × ${s.h} · click a panel to select it · drag on a panel to pan it`;
+
+  finish();
+  return true;
 }

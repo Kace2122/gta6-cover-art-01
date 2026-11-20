@@ -4,122 +4,98 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neon Coast Cover Studio — GTA-style cover maker</title>
-<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main class="app">
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">NC</span>
+    <div>
+      <h1>Neon Coast Cover Studio</h1>
+      <p>Turn any photo into a multi-panel poster cover. Offline, on your machine.</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button id="undoBtn" type="button" title="Undo">Undo</button>
+    <button id="redoBtn" type="button" title="Redo">Redo</button>
+    <button id="exportBtn" type="button" class="primary">Export PNG</button>
+  </div>
+</header>
+
+<main class="studio">
   <section class="controls" aria-label="Cover controls">
-    <header>
-      <h1>Neon Coast <span>Cover Studio</span></h1>
-      <p>Turn any photo and a caption into GTA-style cover art. Your photos never
-      leave this machine — everything runs offline, right here.</p>
-    </header>
-
-    <section aria-label="Photos">
+    <div class="group">
       <h2>1 · Photos</h2>
-      <div class="slots">
-        <label class="slot">
-          <input class="slot-picker" type="radio" name="slot" value="0" checked>
-          <img src="./samples/boulevard.jpg" alt="Boulevard sample photo">
-          <span class="slot-name">Empty</span>
-        </label>
-        <label class="slot">
-          <input class="slot-picker" type="radio" name="slot" value="1">
-          <img src="./samples/pier.jpg" alt="Pier sample photo">
-          <span class="slot-name">Empty</span>
-        </label>
-        <label class="slot">
-          <input class="slot-picker" type="radio" name="slot" value="2">
-          <span class="slot-empty">+ yours</span>
-          <span class="slot-name">Empty</span>
-        </label>
-      </div>
-      <p class="hint">Pick a slot, then load a photo into it. Click a loaded slot to
-      put that photo in the selected panel.</p>
+      <p class="hint">Add up to three photos. Click a panel in the preview to pick which panel you are adjusting.</p>
+      <div class="slots" id="photoSlots"></div>
       <div class="row">
-        <label class="file-btn">Add your photo
-          <input id="photoFile" type="file" accept="image/*">
-        </label>
-        <button id="fillAll" type="button">Fill all panels</button>
+        <button id="sampleBtn" type="button">Load sample photos</button>
+        <button id="clearBtn" type="button">Clear photos</button>
       </div>
-      <div class="row">
-        <button type="button" data-sample="boulevard.jpg" data-sample-name="Boulevard sample">Boulevard sample</button>
-        <button type="button" data-sample="pier.jpg" data-sample-name="Pier sample">Pier sample</button>
-      </div>
-    </section>
+    </div>
 
-    <section aria-label="Caption">
-      <h2>2 · Lettering</h2>
-      <label>Caption
-        <input id="caption" type="text" maxlength="32" value="NEON COAST">
-      </label>
-      <label>Subtitle
-        <input id="subtitle" type="text" maxlength="48" value="Vice nights, golden days">
-      </label>
-    </section>
+    <div class="group">
+      <h2>2 · Layout</h2>
+      <div class="chips" id="layoutChips"></div>
+    </div>
 
-    <section aria-label="Layout">
-      <h2>3 · Layout</h2>
-      <div class="layout-grid">
-        <button type="button" data-layout="nine" class="active">Nine-Panel Grid</button>
-        <button type="button" data-layout="hero">Hero + Three</button>
-        <button type="button" data-layout="four">Four-Panel Grid</button>
-        <button type="button" data-layout="full">Full Bleed</button>
-        <button type="button" data-layout="tilted">Tilted Snapshots</button>
-        <button type="button" data-layout="poster">Classic Poster</button>
-      </div>
-      <p id="panelChip" class="panel-chip selected">Panel 1 selected — drag on the cover to move its crop</p>
-      <label>Zoom selected panel
-        <span class="zoom-row"><input id="zoom" type="range" min="1" max="3" step="0.05" value="1"><output id="zoomVal">100%</output></span>
-      </label>
-      <p class="hint">Click a panel on the cover to select it. Drag to reposition,
-      scroll to zoom.</p>
-    </section>
+    <div class="group">
+      <h2>3 · Colour grade</h2>
+      <div class="chips" id="gradeChips"></div>
+    </div>
 
-    <section aria-label="Grade">
-      <h2>4 · Grade</h2>
-      <div class="grade-row">
-        <button type="button" data-grade="sunset" class="active" style="--sw1:#ff7a45;--sw2:#d63082">Sunset</button>
-        <button type="button" data-grade="neon" style="--sw1:#00e5ff;--sw2:#ff0099">Neon</button>
-        <button type="button" data-grade="vice" style="--sw1:#ffb7c5;--sw2:#00b8d4">Vice</button>
-        <button type="button" data-grade="gold" style="--sw1:#ffc400;--sw2:#b05c00">Gold</button>
-        <button type="button" data-grade="noir" style="--sw1:#f2f2f2;--sw2:#111111">Noir</button>
-      </div>
-      <div class="row">
-        <label class="check"><input id="grain" type="checkbox" checked> Film grain</label>
-        <label class="check"><input id="vignette" type="checkbox" checked> Vignette</label>
-      </div>
-    </section>
-
-    <section aria-label="Export">
-      <h2>5 · Export PNG</h2>
-      <label>Preview size
-        <select id="size">
-          <option value="square">Square 1080 x 1080</option>
-          <option value="portrait">Portrait 1080 x 1350</option>
-          <option value="wide">Wide 1920 x 1080</option>
-          <option value="story">Story 1080 x 1920</option>
-        </select>
+    <div class="group">
+      <h2>4 · Caption</h2>
+      <label class="field">Title
+        <input id="captionInput" type="text" maxlength="28" value="NEON COAST" autocomplete="off">
       </label>
-      <div class="export-grid">
-        <button type="button" data-export="square">PNG 1080 x 1080</button>
-        <button type="button" data-export="portrait">PNG 1080 x 1350</button>
-        <button type="button" data-export="wide">PNG 1920 x 1080</button>
-        <button type="button" data-export="story">PNG 1080 x 1920</button>
-      </div>
-      <button id="exportAll" type="button" class="primary">Export all four sizes</button>
-      <div class="row">
-        <button id="undo" type="button" disabled>Undo</button>
-        <button id="redo" type="button" disabled>Redo</button>
-      </div>
-      <p id="status" role="status">Loading the boulevard sample…</p>
-    </section>
+      <label class="field">Subtitle
+        <input id="subtitleInput" type="text" maxlength="48" value="Vice City nights, palm trees &amp; pink skies" autocomplete="off">
+      </label>
+      <label class="field">Badge
+        <input id="badgeInput" type="text" maxlength="24" value="★★★★★ LEONIDA" autocomplete="off">
+      </label>
+    </div>
+
+    <div class="group">
+      <h2>5 · Selected panel</h2>
+      <p class="hint" id="panelHint">Panel 1 selected.</p>
+      <label class="field">Zoom
+        <input id="zoomSlider" type="range" min="1" max="2.5" step="0.05" value="1.15">
+      </label>
+      <label class="field">Pan left / right
+        <input id="panXSlider" type="range" min="-0.5" max="0.5" step="0.02" value="0">
+      </label>
+      <label class="field">Pan up / down
+        <input id="panYSlider" type="range" min="-0.5" max="0.5" step="0.02" value="0">
+      </label>
+      <label class="field">Use photo
+        <select id="panelPhotoSelect"></select>
+      </label>
+    </div>
+
+    <div class="group">
+      <h2>6 · Finish</h2>
+      <div class="chips" id="sizeChips"></div>
+      <label class="check"><input id="halftoneToggle" type="checkbox" checked> Halftone title block</label>
+      <label class="check"><input id="grainToggle" type="checkbox" checked> Film grain + vignette</label>
+      <label class="check"><input id="frameToggle" type="checkbox" checked> White poster frame</label>
+    </div>
   </section>
 
-  <section class="stage" aria-label="Cover preview">
-    <canvas id="cover" width="1080" height="1080" aria-label="The cover"></canvas>
+  <section class="preview" aria-label="Live preview">
+    <div class="canvas-wrap">
+      <canvas id="previewCanvas" width="1080" height="1080"></canvas>
+    </div>
+    <p class="preview-note" id="previewNote">1080 × 1080 · click a panel to select it · drag on a panel to pan it</p>
+    <div class="panel-strip" id="panelStrip"></div>
   </section>
 </main>
-<script type="module" src="./src/main.js"></script>
+
+<footer class="foot">
+  <p>Neon Coast Cover Studio — an original fan-made cover tool. No Rockstar Games logo, artwork or font. Photos stay on your device; nothing is uploaded.</p>
+</footer>
+
+<script type="module" src="src/main.js"></script>
 </body>
 </html>
